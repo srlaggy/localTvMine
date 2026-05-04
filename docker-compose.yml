@@ -6,11 +6,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./bustaTv.db
+      - DATABASE_URL=sqlite:////app/data/bustaTv.db
       - SECRET_API_KEY=bustatv-dev-secret-key-changeme
     volumes:
       - ./backend:/app/backend
-      - bustav_db:/app/backend
+      - bustav_db:/app/data
     networks:
       - bustav_network
 
@@ -18,8 +18,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      args:
-        - VITE_API_URL=http://localhost:8000
     ports:
       - "5173:5173"
     depends_on:
