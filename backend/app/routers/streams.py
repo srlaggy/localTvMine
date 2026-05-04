@@ -1,6 +1,9 @@
 import re
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.crud import channels as crud_channels
 
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
@@ -9,9 +12,8 @@ HEADERS = {
     "Referer": "https://tvtvhd.com/",
 }
 
-async def get_stream_url(channel_slug: str) -> str:
-    """Extrae la URL real del stream desde tvtvhd.com"""
-    tvtvhd_url = f"https://tvtvhd.com/vivo/canales.php?stream={channel_slug}"
+async def _scrape_tvtvhd(tvtvhd_url: str) -> str:
+    """Extrae la URL real del stream desde una página de tvtvhd.com"""
 
     try:
         async with httpx.AsyncClient(timeout=10, headers=HEADERS, follow_redirects=True) as client:
@@ -46,21 +48,56 @@ async def get_stream_url(channel_slug: str) -> str:
         raise HTTPException(status_code=500, detail=f"Error extrayendo stream: {str(e)}")
 
 @router.get("/{channel_slug}")
-async def get_stream(channel_slug: str):
-    """Obtiene la URL del stream para un canal específico"""
-    try:
-        stream_url = await get_stream_url(channel_slug)
+async def get_stream(channel_slug: str, db: Session = Depends(get_db)):
+    """Obtiene la URL del stream para un canal específico.
 
-        # Retornar URL con headers necesarios para reproducción
+    - Si el canal tiene una URL .m3u8 directa (ej: IPTV), la retorna tal cual.
+    - Si el canal apunta a tvtvhd.com, extrae el stream mediante scraping.
+    """
+    # Buscar canal en la BD
+    channel = crud_channels.get_channel_by_slug(db, channel_slug)
+
+    if channel and channel.stream_url:
+        stream_url = channel.stream_url
+
+        # URL directa: ya es un stream .m3u8, retornar sin scraping
+        if ".m3u8" in stream_url:
+            return {
+                "url": stream_url,
+                "channel": channel_slug,
+                "headers": {}
+            }
+
+        # URL de tvtvhd: necesita scraping
+        if "tvtvhd.com" in stream_url:
+            try:
+                resolved_url = await _scrape_tvtvhd(stream_url)
+                return {
+                    "url": resolved_url,
+                    "channel": channel_slug,
+                    "headers": {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                        "Referer": "https://tvtvhd.com/"
+                    }
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error extrayendo stream: {str(e)}")
+
+    # Fallback: canal no encontrado en BD, intentar tvtvhd por slug directamente
+    try:
+        tvtvhd_url = f"https://tvtvhd.com/vivo/canales.php?stream={channel_slug}"
+        resolved_url = await _scrape_tvtvhd(tvtvhd_url)
         return {
-            "url": stream_url,
+            "url": resolved_url,
             "channel": channel_slug,
             "headers": {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Referer": "https://tvtvhd.com/"
             }
         }
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Canal '{channel_slug}' no encontrado o sin stream disponible")
