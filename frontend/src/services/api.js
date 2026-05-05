@@ -1,14 +1,11 @@
 // Detectar URL del backend dinámicamente
 const BASE_URL = (() => {
-  // Si hay variable de entorno, usarla
-  if (import.meta.env.VITE_API_URL) {
+  // Si la variable de entorno está definida y no es localhost, usarla
+  if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost')) {
     return import.meta.env.VITE_API_URL;
   }
-  // Si estamos en localhost (desarrollo), usar localhost:8000
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:8000';
-  }
-  // Si estamos en Docker, usar el mismo host
+  // Siempre usar el host actual para conectarse al backend en el puerto 8000
+  // Esto permite que funcione tanto en localhost como con la IP del equipo en la red local
   return `http://${window.location.hostname}:8000`;
 })();
 
