@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import styles from './LoginForm.module.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const BASE_URL = (() => {
+  if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost')) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return `http://${window.location.hostname}:8000`;
+})();
 
 export default function LoginForm({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
