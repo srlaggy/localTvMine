@@ -2,6 +2,7 @@ import base64
 from fastapi import APIRouter, Request, Response, HTTPException
 from fastapi.responses import StreamingResponse
 import httpx
+import re
 from urllib.parse import urljoin
 
 router = APIRouter(prefix="/api/proxy", tags=["proxy"])
@@ -11,8 +12,8 @@ PROXY_HEADERS = {
     "Referer": "https://tvtvhd.com/",
 }
 
-@router.get("/")
-async def proxy_media(url: str, request: Request):
+@router.get("/{path:path}")
+async def proxy_media(url: str, request: Request, path: str = ""):
     try:
         # Añadir padding en caso de que falte por el envío en la URL
         padded_url = url + '=' * (-len(url) % 4)
@@ -44,19 +45,30 @@ async def proxy_media(url: str, request: Request):
         
         text = content.decode('utf-8', errors='ignore')
         new_lines = []
+        
+        def replacer(match):
+            uri = match.group(1)
+            abs_url = urljoin(target_url, uri)
+            encoded_url = base64.b64encode(abs_url.encode('utf-8')).decode('utf-8')
+            return f'URI="{request.url.scheme}://{request.url.netloc}/api/proxy/stream.m3u8?url={encoded_url}"'
+
         for line in text.splitlines():
             line_stripped = line.strip()
-            if line_stripped and not line_stripped.startswith("#"):
+            if not line_stripped:
+                new_lines.append(line)
+                continue
+                
+            if line_stripped.startswith("#"):
+                if 'URI="' in line_stripped:
+                    line_stripped = re.sub(r'URI="([^"]+)"', replacer, line_stripped)
+                new_lines.append(line_stripped)
+            else:
                 abs_url = urljoin(target_url, line_stripped)
                 encoded_url = base64.b64encode(abs_url.encode('utf-8')).decode('utf-8')
-                # Base de la URL local (puede ser llamada por proxy reverso o dev server, construimos basada en request)
-                base_url_str = f"{request.url.scheme}://{request.url.netloc}/api/proxy/?url="
-                proxy_url = f"{base_url_str}{encoded_url}"
+                proxy_url = f"{request.url.scheme}://{request.url.netloc}/api/proxy/stream.m3u8?url={encoded_url}"
                 new_lines.append(proxy_url)
-            else:
-                new_lines.append(line)
         
-        return Response(content="\n".join(new_lines), media_type=content_type or "application/vnd.apple.mpegurl")
+        return Response(content="\n".join(new_lines), media_type="application/vnd.apple.mpegurl")
 
     # Para fragmentos de video u otros archivos binarios, los transmitimos por streaming
     async def stream_gen():

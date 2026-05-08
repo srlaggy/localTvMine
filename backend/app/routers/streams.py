@@ -74,7 +74,7 @@ async def get_stream(channel_slug: str, request: Request, db: Session = Depends(
             try:
                 resolved_url = await _scrape_tvtvhd(stream_url)
                 encoded_url = base64.b64encode(resolved_url.encode('utf-8')).decode('utf-8')
-                base_url_str = f"{request.url.scheme}://{request.url.netloc}/api/proxy/?url="
+                base_url_str = f"{request.url.scheme}://{request.url.netloc}/api/proxy/stream.m3u8?url="
                 proxy_url = f"{base_url_str}{encoded_url}"
                 return {
                     "url": proxy_url,
@@ -92,7 +92,7 @@ async def get_stream(channel_slug: str, request: Request, db: Session = Depends(
         tvtvhd_url = f"https://tvtvhd.com/vivo/canales.php?stream={channel_slug}"
         resolved_url = await _scrape_tvtvhd(tvtvhd_url)
         encoded_url = base64.b64encode(resolved_url.encode('utf-8')).decode('utf-8')
-        base_url_str = f"{request.url.scheme}://{request.url.netloc}/api/proxy/?url="
+        base_url_str = f"{request.url.scheme}://{request.url.netloc}/api/proxy/stream.m3u8?url="
         proxy_url = f"{base_url_str}{encoded_url}"
         return {
             "url": proxy_url,

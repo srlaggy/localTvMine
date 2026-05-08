@@ -71,6 +71,7 @@ export default function VideoPlayer({ channel }) {
             height: '100%',
             autoPlay: true,
             mute: false,
+            mimeType: 'application/x-mpegURL',
             poster: channel.logo_url || '',
             hlsjsConfig: {
               // Los headers User-Agent y Referer no pueden ser modificados
