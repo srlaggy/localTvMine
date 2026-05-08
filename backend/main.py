@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.routers import channels, categories, streams, auth
+from app.routers import channels, categories, streams, auth, proxy
 from app.models.category import Category
 from app.models.channel import Channel
 from app.models.user import User
@@ -157,7 +157,7 @@ app.include_router(channels.router)
 app.include_router(categories.router)
 app.include_router(streams.router)
 app.include_router(auth.router)
-
+app.include_router(proxy.router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

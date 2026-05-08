@@ -73,10 +73,8 @@ export default function VideoPlayer({ channel }) {
             mute: false,
             poster: channel.logo_url || '',
             hlsjsConfig: {
-              xhrSetup: (xhr, url) => {
-                xhr.setRequestHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-                xhr.setRequestHeader('Referer', 'https://tvtvhd.com/');
-              },
+              // Los headers User-Agent y Referer no pueden ser modificados
+              // desde el cliente por políticas de seguridad del navegador.
             },
           });
           setError(null);

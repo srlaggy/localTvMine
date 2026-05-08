@@ -1,6 +1,7 @@
 import re
+import base64
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.crud import channels as crud_channels
@@ -48,7 +49,7 @@ async def _scrape_tvtvhd(tvtvhd_url: str) -> str:
         raise HTTPException(status_code=500, detail=f"Error extrayendo stream: {str(e)}")
 
 @router.get("/{channel_slug}")
-async def get_stream(channel_slug: str, db: Session = Depends(get_db)):
+async def get_stream(channel_slug: str, request: Request, db: Session = Depends(get_db)):
     """Obtiene la URL del stream para un canal específico.
 
     - Si el canal tiene una URL .m3u8 directa (ej: IPTV), la retorna tal cual.
@@ -72,13 +73,14 @@ async def get_stream(channel_slug: str, db: Session = Depends(get_db)):
         if "tvtvhd.com" in stream_url:
             try:
                 resolved_url = await _scrape_tvtvhd(stream_url)
+                encoded_url = base64.b64encode(resolved_url.encode('utf-8')).decode('utf-8')
+                base_url_str = f"{request.url.scheme}://{request.url.netloc}/api/proxy/?url="
+                proxy_url = f"{base_url_str}{encoded_url}"
                 return {
-                    "url": resolved_url,
+                    "url": proxy_url,
                     "channel": channel_slug,
-                    "headers": {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                        "Referer": "https://tvtvhd.com/"
-                    }
+                    "is_proxied": True,
+                    "headers": {}
                 }
             except HTTPException:
                 raise
@@ -89,13 +91,14 @@ async def get_stream(channel_slug: str, db: Session = Depends(get_db)):
     try:
         tvtvhd_url = f"https://tvtvhd.com/vivo/canales.php?stream={channel_slug}"
         resolved_url = await _scrape_tvtvhd(tvtvhd_url)
+        encoded_url = base64.b64encode(resolved_url.encode('utf-8')).decode('utf-8')
+        base_url_str = f"{request.url.scheme}://{request.url.netloc}/api/proxy/?url="
+        proxy_url = f"{base_url_str}{encoded_url}"
         return {
-            "url": resolved_url,
+            "url": proxy_url,
             "channel": channel_slug,
-            "headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Referer": "https://tvtvhd.com/"
-            }
+            "is_proxied": True,
+            "headers": {}
         }
     except HTTPException:
         raise
