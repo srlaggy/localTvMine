@@ -1,5 +1,5 @@
 // Detectar URL del backend dinámicamente
-const BASE_URL = (() => {
+export const BASE_URL = (() => {
   // Si la variable de entorno está definida y no es localhost, usarla
   if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost')) {
     return import.meta.env.VITE_API_URL;

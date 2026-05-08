@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../services/api';
+import { api, BASE_URL } from '../../services/api';
 import styles from './Admin.module.css';
 
 export default function ChannelForm({ onClose, onSuccess, channel = null, apiKey }) {
@@ -17,7 +17,7 @@ export default function ChannelForm({ onClose, onSuccess, channel = null, apiKey
 
   useEffect(() => {
     // Fetch categories
-    fetch('http://localhost:8000/api/categories')
+    fetch(`${BASE_URL}/api/categories`)
       .then(res => res.json())
       .then(data => setCategories(data))
       .catch(err => console.error('Error fetching categories:', err));

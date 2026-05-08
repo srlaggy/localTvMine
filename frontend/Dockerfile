@@ -3,10 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app/frontend
 
-COPY frontend/package*.json ./
+COPY package*.json ./
 RUN npm ci
 
-COPY frontend/ .
+COPY . .
+
+# Argumento para la URL de la API que se inyecta desde docker-compose
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build
 

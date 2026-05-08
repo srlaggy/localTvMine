@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import CastButton from '../CastButton/CastButton';
 import styles from './VideoPlayer.module.css';
 
-const BASE_URL = (() => {
-  if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost')) {
-    return import.meta.env.VITE_API_URL;
-  }
-  return `http://${window.location.hostname}:8000`;
-})();
+import { BASE_URL } from '../../services/api';
 
 export default function VideoPlayer({ channel }) {
   const playerRef = useRef(null);
