@@ -4,6 +4,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./bustaTv.db"
     SECRET_API_KEY: str = "bustatv-dev-secret-key-changeme"
     BACKEND_URL: str = "http://localhost:8000"
+    HOST_IP: str = "localhost"
 
     class Config:
         env_file = ".env"
