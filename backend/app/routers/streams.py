@@ -9,36 +9,56 @@ HEADERS = {
     "Referer": "https://tvtvhd.com/",
 }
 
+def _extract_m3u8(html_content: str) -> str | None:
+    """Busca URL m3u8 en contenido HTML"""
+    match = re.search(r'playbackURL\s*[=:]\s*["\']?([^"\'<>]+\.m3u8[^"\'<>]*)["\']?', html_content)
+    if match:
+        url = match.group(1)
+        if url.startswith('http'):
+            return url
+
+    match = re.search(r'<source[^>]+src=["\']([^"\']+\.m3u8[^"\']*)["\']', html_content)
+    if match:
+        return match.group(1)
+
+    match = re.search(r'data-src=["\']?([https://][^"\'<>]+\.m3u8[^"\'<>]*)["\']?', html_content)
+    if match:
+        return match.group(1)
+
+    match = re.search(r'(https?://[^"\'<>\s]+\.m3u8[^"\'<>\s]*)', html_content)
+    if match:
+        return match.group(1)
+
+    return None
+
+def _extract_iframe_src(html_content: str) -> str | None:
+    """Extrae la URL del iframe si la página es un wrapper"""
+    match = re.search(r'<iframe[^>]+src=["\']([^"\']+)["\']', html_content)
+    if match:
+        return match.group(1)
+    return None
+
+
 async def get_stream_url(channel_slug: str) -> str:
     """Extrae la URL real del stream desde tvtvhd.com"""
     tvtvhd_url = f"https://tvtvhd.com/vivo/canales.php?stream={channel_slug}"
 
     try:
-        async with httpx.AsyncClient(timeout=10, headers=HEADERS, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=15, headers=HEADERS, follow_redirects=True) as client:
             response = await client.get(tvtvhd_url)
             html_content = response.text
 
-        # Buscar playbackURL en el HTML - patrón más preciso
-        match = re.search(r'playbackURL\s*[=:]\s*["\']?([^"\'<>]+\.m3u8[^"\'<>]*)["\']?', html_content)
-        if match:
-            url = match.group(1)
-            if url.startswith('http'):
+        url = _extract_m3u8(html_content)
+        if url:
+            return url
+
+        iframe_src = _extract_iframe_src(html_content)
+        if iframe_src:
+            async with httpx.AsyncClient(timeout=15, headers=HEADERS, follow_redirects=True) as client:
+                iframe_response = await client.get(iframe_src)
+            url = _extract_m3u8(iframe_response.text)
+            if url:
                 return url
-
-        # Buscar en etiqueta source
-        match = re.search(r'<source[^>]+src=["\']([^"\']+\.m3u8[^"\']*)["\']', html_content)
-        if match:
-            return match.group(1)
-
-        # Buscar en data-src o atributos similares
-        match = re.search(r'data-src=["\']?([https://][^"\'<>]+\.m3u8[^"\'<>]*)["\']?', html_content)
-        if match:
-            return match.group(1)
-
-        # Último intento: buscar cualquier URL que contenga m3u8
-        match = re.search(r'(https?://[^"\'<>\s]+\.m3u8[^"\'<>\s]*)', html_content)
-        if match:
-            return match.group(1)
 
         raise ValueError("No se encontró la URL del stream")
 
