@@ -5,6 +5,7 @@ from app.routers import channels, categories, streams, auth
 from app.models.category import Category
 from app.models.channel import Channel
 from app.models.user import User
+from app.config import settings
 
 # Crear tablas en la BD
 Base.metadata.create_all(bind=engine)
@@ -153,6 +154,8 @@ app.add_middleware(
         "http://127.0.0.1:5174",
         "http://localhost:5601",
         "http://127.0.0.1:5601",
+        f"http://{settings.HOST_IP}:5173",
+        f"http://{settings.HOST_IP}:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],

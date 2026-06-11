@@ -5,6 +5,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+AGENTS.md
+
 # Python
 __pycache__/
 *.py[cod]
